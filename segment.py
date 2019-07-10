@@ -26,6 +26,7 @@ class VoiceActivityDetection:
         self.__segment_count = 0
         self.__voice_detected = False
         self.__silence_thd_ms = ms
+        self.__count = 0
 
     # Voice Activity Detection
     # Adaptive threshold
@@ -59,8 +60,9 @@ class VoiceActivityDetection:
     def get_frame(self):
         window = self.__buffer[:self.__buffer_size]
         self.__buffer = self.__buffer[self.__step:]
+        self.__count += 1
         # print('__buffer size %i'%self.__buffer.size)
-        return window
+        return window, self.__count
 
     # Adds new audio samples to the internal
     # buffer and process them
@@ -72,13 +74,16 @@ class VoiceActivityDetection:
                 # print('window size %i'%window.size)
                 if self.vad(window):  # speech frame
                     print('voiced')
+                    if len(self.__out_buffer) == 0:
+                        start = count
                     self.__out_buffer = numpy.append(self.__out_buffer, window)
                     self.__voice_detected = True
                 elif self.__voice_detected:
                     print('unvoiced')
                     self.__voice_detected = False
                     self.__segment_count = self.__segment_count + 1
-                    wf.write('%s.%i.%i.wav'%(sys.argv[2],self.__channel,self.__segment_count),sr,self.__out_buffer)
+                    end = count
+                    wf.write('%s.%i.%i.%.2f:%.2f.wav'%(sys.argv[2],self.__channel,self.__segment_count, (start-1)*0.02, end*0.02),sr,self.__out_buffer)
                     self.__out_buffer = numpy.array([],dtype=numpy.int16)
                     print(self.__segment_count)
 
